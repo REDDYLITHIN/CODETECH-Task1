@@ -1,0 +1,79 @@
+import os
+import time
+import logging
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+class SimpleSandbox:
+    def __init__(self, monitor_dir):
+        self.monitor_dir = monitor_dir
+        self.baseline = set()
+        
+    def capture_baseline(self):
+        """Capture initial state of the monitored directory"""
+        logging.info("Capturing baseline state...")
+        self.baseline = self._scan_directory()
+        
+    def _scan_directory(self):
+        """Scan directory and return set of files with their metadata"""
+        files = set()
+        for root, _, filenames in os.walk(self.monitor_dir):
+            for filename in filenames:
+                path = os.path.join(root, filename)
+                try:
+                    stat = os.stat(path)
+                    files.add((
+                        path,
+                        stat.st_size,
+                        stat.st_mtime
+                    ))
+                except OSError as e:
+                    logging.error(f"Error scanning {path}: {e}")
+        return files
+        
+    def monitor_changes(self, duration=60):
+        """Monitor directory for changes over specified duration"""
+        logging.info(f"Starting monitoring for {duration} seconds...")
+        
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            current_state = self._scan_directory()
+            
+            # Check for new or modified files
+            for file_info in current_state - self.baseline:
+                path, size, mtime = file_info
+                logging.info(f"Change detected: {path}")
+                logging.info(f"Size: {size} bytes")
+                logging.info(f"Modified: {datetime.fromtimestamp(mtime)}")
+                
+            # Check for deleted files
+            for file_info in self.baseline - current_state:
+                path = file_info[0]
+                logging.info(f"File deleted: {path}")
+                
+            time.sleep(1)
+            
+def main():
+    # Create a sandbox instance monitoring the current directory
+    sandbox = SimpleSandbox(".")
+    
+    try:
+        # Capture initial state
+        sandbox.capture_baseline()
+        
+        # Monitor for changes
+        logging.info("Starting monitoring. Press Ctrl+C to stop.")
+        sandbox.monitor_changes(duration=300)  # Monitor for 5 minutes
+        
+    except KeyboardInterrupt:
+        logging.info("Monitoring stopped by user")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
