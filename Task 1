@@ -1,0 +1,28 @@
+import re
+
+def check_password_strength(password):
+    # Initialize strength criteria
+    length_valid = len(password) >= 12
+    has_lower = re.search(r'[a-z]', password) is not None
+    has_upper = re.search(r'[A-Z]', password) is not None
+    has_digit = re.search(r'\d', password) is not None
+    has_special = re.search(r'[!@#$%^&*()\-+]', password) is not None
+
+    # Check for uniqueness
+    unique_chars = len(set(password)) == len(password)
+
+    # Determine password strength
+    if length_valid and has_lower and has_upper and has_digit and has_special:
+        return "Strong Password"
+    elif len(password) >= 8 and (has_lower or has_upper) and has_special:
+        return "Moderate Password"
+    else:
+        return "Weak Password"
+
+def main():
+    password = input("Enter your password: ")
+    strength = check_password_strength(password)
+    print(strength)
+
+if __name__ == "__main__":
+    main()
